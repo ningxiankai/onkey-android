@@ -68,6 +68,7 @@ pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativeInit(
     data_dir: JString,
     native_lib_dir: JString,
 ) {
+    let mut env = env;
     let dir = match env.get_string(&data_dir) {
         Ok(s) => std::path::PathBuf::from(s.to_string_lossy().into_owned()),
         Err(_) => return,
@@ -84,10 +85,10 @@ pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativeInit(
 
 #[no_mangle]
 pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_coreVersion(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
-    jstr(&env, "onkey-core 0.1.0 (OnKey 7a74cd9 pipeline)")
+    jstr(&mut env, "onkey-core 0.1.0 (OnKey 7a74cd9 pipeline)")
 }
 
 /// Learn a song: stereo interleaved f32 in, the singer's midi + periodicity per 10 ms
@@ -102,19 +103,20 @@ pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativeLearnSong(
     rate: jfloat,
     progress: JObject,
 ) -> jstring {
+    let mut env = env;
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        learn_song(&env, models_dir, stereo, rate, &progress)
+        learn_song(&mut env, models_dir, stereo, rate, &progress)
     }));
     let json = match outcome {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => format!("{{\"error\":{}}}", serde_json::to_string(&e).unwrap_or_else(|_| "\"learn failed\"".into())),
         Err(_) => "{\"error\":\"panic in native learn\"}".into(),
     };
-    jstr(&env, &json)
+    jstr(&mut env, &json)
 }
 
 fn learn_song(
-    env: &JNIEnv,
+    env: &mut JNIEnv,
     models_dir: JString,
     stereo: JFloatArray,
     rate: jfloat,
@@ -213,11 +215,11 @@ pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativePitchFrame(
     outcome.unwrap_or(f32::NAN)
 }
 
-fn report_progress(env: &JNIEnv, obj: &JObject, frac: f32) {
+fn report_progress(env: &mut JNIEnv, obj: &JObject, frac: f32) {
     let _ = env.call_method(obj, "onProgress", "(F)V", &[JValue::from(frac)]);
 }
 
-fn jstr(env: &JNIEnv, s: &str) -> jstring {
+fn jstr(env: &mut JNIEnv, s: &str) -> jstring {
     match env.new_string(s) {
         Ok(j) => j.into_raw(),
         Err(_) => std::ptr::null_mut(),

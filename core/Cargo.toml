@@ -20,12 +20,17 @@ ureq = { version = "2", features = ["json"] }
 urlencoding = "2"
 realfft = "3"
 hyphenation = { version = "0.8", features = ["embed_en-us"] }
+rtrb = "0.3"
 libc = "0.2"
 flate2 = "1"
 crc32fast = "1"
 # ONNX Runtime with prebuilt binaries for Android (aarch64). NOTE: the upstream
 # "coreml" feature is intentionally off; Core ML paths are cfg-gated to Apple.
 ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
+
+[features]
+# development-only test hooks (simulated singer, event log); never in release builds
+devtest = []
 
 [profile.release]
 opt-level = 3

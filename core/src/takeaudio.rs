@@ -188,6 +188,7 @@ fn quiet() -> bool {
 /// (the ones most likely played back). Progress goes to the log. Then the recordings are kept under their cap.
 pub fn start(data: PathBuf) {
     std::thread::Builder::new().name("onkey-take-audio".into()).spawn(move || {
+        #[cfg(target_os = "macos")] // ANDROID PATCH: QoS is macOS-only; Android threads are already background-class
         unsafe {
             libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_BACKGROUND, 0);
         }

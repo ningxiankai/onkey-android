@@ -1171,10 +1171,10 @@ pub fn format_time(t: std::time::SystemTime, fmt: &str) -> String {
     let secs = t.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
     unsafe {
         let mut tm: libc_tm = std::mem::zeroed();
-        localtime_r(&secs, &mut tm);
+        localtime_r(&secs as *const i64 as *const libc::time_t, &mut tm);
         let mut buf = [0u8; 64];
         let f = std::ffi::CString::new(fmt).unwrap();
-        let n = strftime(buf.as_mut_ptr() as *mut i8, buf.len(), f.as_ptr(), &tm);
+        let n = strftime(buf.as_mut_ptr() as *mut libc::c_char, buf.len(), f.as_ptr(), &tm);
         String::from_utf8_lossy(&buf[..n]).into_owned()
     }
 }
@@ -1182,12 +1182,12 @@ pub fn format_time(t: std::time::SystemTime, fmt: &str) -> String {
 #[repr(C)]
 struct libc_tm {
     tm_sec: i32, tm_min: i32, tm_hour: i32, tm_mday: i32, tm_mon: i32, tm_year: i32, tm_wday: i32, tm_yday: i32,
-    tm_isdst: i32, tm_gmtoff: i64, tm_zone: *const i8,
-}
+    tm_isdst: i32, tm_gmtoff: i64, tm_zone: *const libc::c_char,
+} // ANDROID PATCH: c_char is u8 on aarch64-linux-android, hardcoding i8 breaks the build
 
 extern "C" {
-    fn localtime_r(t: *const i64, out: *mut libc_tm) -> *mut libc_tm;
-    fn strftime(s: *mut i8, max: usize, fmt: *const i8, tm: *const libc_tm) -> usize;
+    fn localtime_r(t: *const libc::time_t, out: *mut libc_tm) -> *mut libc_tm;
+    fn strftime(s: *mut libc::c_char, max: usize, fmt: *const libc::c_char, tm: *const libc_tm) -> usize;
 }
 
 pub fn fit<T: Clone>(x: &[T], n: usize, fill: T) -> Vec<T> {

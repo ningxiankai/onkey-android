@@ -59,6 +59,7 @@ fn r1(x: f64) -> f64 {
 
 // ---------------------------------------------------------------- which build, which Mac
 
+#[cfg(target_os = "macos")] // ANDROID PATCH
 fn sysctl_str(name: &str) -> Option<String> {
     let c = std::ffi::CString::new(name).ok()?;
     let mut len = 0usize;
@@ -73,6 +74,12 @@ fn sysctl_str(name: &str) -> Option<String> {
         buf.truncate(len);
         Some(String::from_utf8_lossy(&buf).trim_end_matches('\0').trim().to_string()).filter(|s| !s.is_empty())
     }
+}
+
+/// ANDROID PATCH: no sysctl on Android; hardware queries report nothing.
+#[cfg(not(target_os = "macos"))]
+fn sysctl_str(_name: &str) -> Option<String> {
+    None
 }
 
 /// This build: version, commit and when that commit was made.
@@ -286,10 +293,21 @@ fn cpu_seconds() -> f64 {
 }
 
 /// OnKey's memory as Activity Monitor shows it (the physical footprint), MB.
+#[cfg(target_os = "macos")] // ANDROID PATCH
 pub fn footprint_mb() -> f64 {
     let mut ri: libc::rusage_info_v2 = unsafe { std::mem::zeroed() };
     let r = unsafe { libc::proc_pid_rusage(libc::getpid(), libc::RUSAGE_INFO_V2, &mut ri as *mut _ as *mut libc::rusage_info_t) };
     if r == 0 { ri.ri_phys_footprint as f64 / 1e6 } else { 0.0 }
+}
+
+/// ANDROID PATCH: VmRSS from /proc/self/status stands in for the physical footprint.
+#[cfg(not(target_os = "macos"))]
+pub fn footprint_mb() -> f64 {
+    std::fs::read_to_string("/proc/self/status").ok()
+        .and_then(|s| s.lines().find(|l| l.starts_with("VmRSS")).map(str::to_owned))
+        .and_then(|l| l.split_whitespace().nth(1)?.parse::<f64>().ok())
+        .map(|kb| kb / 1024.0)
+        .unwrap_or(0.0)
 }
 
 fn sampler() {

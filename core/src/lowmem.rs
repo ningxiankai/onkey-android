@@ -41,6 +41,7 @@ pub fn keep_by_default() -> bool {
 }
 
 /// The Mac's physical memory in bytes (sysctl hw.memsize), if it can be read.
+#[cfg(target_os = "macos")] // ANDROID PATCH
 pub fn physical_memory() -> Option<u64> {
     let mut size: u64 = 0;
     let mut len = std::mem::size_of::<u64>();
@@ -50,9 +51,18 @@ pub fn physical_memory() -> Option<u64> {
     (r == 0 && len == std::mem::size_of::<u64>()).then_some(size)
 }
 
+/// ANDROID PATCH: Linux/Android read MemTotal from /proc/meminfo instead of sysctl.
+#[cfg(not(target_os = "macos"))]
+pub fn physical_memory() -> Option<u64> {
+    let s = std::fs::read_to_string("/proc/meminfo").ok()?;
+    let line = s.lines().find(|l| l.starts_with("MemTotal"))?;
+    line.split_whitespace().nth(1)?.parse::<u64>().ok().map(|kb| kb * 1024)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
+    #[cfg(target_os = "macos")] // ANDROID PATCH
     fn the_mac_says_how_much_memory_it_has() {
         let b = super::physical_memory().expect("hw.memsize");
         assert!(b >= 1 << 30 && b <= 1 << 42, "{b} bytes");
