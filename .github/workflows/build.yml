@@ -36,6 +36,12 @@ jobs:
           }
           check UVR_MDXNET_KARA_2.onnx      bf32e15105a09c0f7dddd2b67346146334d6f3ecb399ed7638eba2ab07cbf5f4
           check crepe-full-b32.onnx         a41c3191fd398754eb46bacd7bb79eb71bfc3b0e7cd47989c2175c64adfe9d28
+          check wav2vec2-base-960h-fp16.onnx 0726ce2cdbb06fd0e90af436833f609d0f5366a914f4a456936c8851a367a6d9
+          check game/bd2dur.onnx            6672d56b00f27a20e9bfaa92801c15e394bb520e49031d3ed2515b0a6cf27402
+          check game/dur2bd.onnx            49d10d1ea186e43c51fd2c51cedb01a3852d363f1c7056ae77df50f7e8dd0996
+          check game/encoder.onnx           a6868a702d9c88ccc06b19e54f49d88b7f8cba4a68517f20806bd81ef6f94e06
+          check game/estimator.onnx         a84738b2504472a1f22773cc6b0eccad1353a8f36229ad490b8fea85388bb5e1
+          check game/segmenter.onnx         7724db4ba59a388fff5aba2f08f0ac025d4ca59caef80e7f474053a1455c88e5
           echo "models verified"
       - uses: actions/upload-artifact@v4
         with:
@@ -57,9 +63,10 @@ jobs:
 
       - name: Place runtime models into APK assets
         run: |
+          # models.rs requires ALL 8 models (incl. game/ subdir) or learn refuses to start
           mkdir -p app/src/main/assets/models
-          cp models-extracted/UVR_MDXNET_KARA_2.onnx app/src/main/assets/models/
-          cp models-extracted/crepe-full-b32.onnx app/src/main/assets/models/
+          cp -R models-extracted/. app/src/main/assets/models/
+          find app/src/main/assets/models -name "*.onnx" | sort
 
       - name: Set up Python and export CREPE-tiny (compile-time)
         uses: actions/setup-python@v5

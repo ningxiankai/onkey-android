@@ -31,22 +31,37 @@ object OnKeyCore {
 
     /**
      * Copy bundled models from assets to filesDir (ONNX Runtime needs real paths).
-     * Idempotent: skipped when the file already exists with the right size.
+     * All 8 models from models.rs, preserving the game/ subdirectory.
+     * Idempotent: skipped when the file already exists with a plausible size.
      */
     fun ensureModels(context: Context): Boolean {
         val dir = modelsDir(context)
         var ok = true
-        for (name in listOf("UVR_MDXNET_KARA_2.onnx", "crepe-full-b32.onnx")) {
+        val bundled = listOf(
+            "UVR_MDXNET_KARA_2.onnx",
+            "crepe-full-b32.onnx",
+            "wav2vec2-base-960h-fp16.onnx",
+            "game/bd2dur.onnx",
+            "game/dur2bd.onnx",
+            "game/encoder.onnx",
+            "game/estimator.onnx",
+            "game/segmenter.onnx",
+        )
+        for (name in bundled) {
             val out = File(dir, name)
+            out.parentFile?.mkdirs()
             val expected = try {
-                context.assets.openFd("models/$name").length
+                context.assets.openFd("models/$name").let { fd ->
+                    if (fd.length > 0) fd.length else -1L
+                }
             } catch (e: Exception) {
                 -1L
             }
-            if (out.isFile && expected < 0 || (out.isFile && out.length() == expected)) continue
+            if (out.isFile && (expected < 0 || out.length() == expected)) continue
             try {
                 context.assets.open("models/$name").use { input ->
                     val tmp = File(dir, "$name.part")
+                    tmp.parentFile?.mkdirs()
                     tmp.outputStream().use { output -> input.copyTo(output) }
                     tmp.renameTo(out) || (out.delete() && tmp.renameTo(out))
                 }
