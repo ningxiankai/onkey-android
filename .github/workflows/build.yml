@@ -64,7 +64,9 @@ jobs:
           python-version: "3.11"
       - name: Export crepe-tiny.onnx
         run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          # torchcrepe needs torchaudio: must come from the SAME cpu index, else pip
+          # resolves a CUDA torchaudio from PyPI that dies on import (no libcudart)
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install torchcrepe onnx
           mkdir -p core/models
           python scripts/export_crepe.py tiny core/models/crepe-tiny.onnx
