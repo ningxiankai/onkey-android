@@ -38,12 +38,12 @@ fun HomeScreen(viewModel: MainViewModel, onPick: () -> Unit, onSing: (LearnedSon
             when (val p = phase) {
                 is LearnJob.Phase.Decoding -> {
                     Spacer(Modifier.height(12.dp))
-                    LinearProgressIndicator(value = 0.3f, modifier = Modifier.fillMaxWidth())
+                    LinearProgressIndicator(progress = { 0.3f }, modifier = Modifier.fillMaxWidth())
                     Text("解码音频…", style = MaterialTheme.typography.bodySmall)
                 }
                 is LearnJob.Phase.Learning -> {
                     Spacer(Modifier.height(12.dp))
-                    LinearProgressIndicator(value = progress, modifier = Modifier.fillMaxWidth())
+                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                     Text("学习旋律中 ${(progress * 100).toInt()}%（人声分离 + 音高追踪，别锁屏）", style = MaterialTheme.typography.bodySmall)
                 }
                 is LearnJob.Phase.Done -> {

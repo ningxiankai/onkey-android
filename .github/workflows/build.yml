@@ -107,7 +107,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - run: gradle assembleDebug --no-daemon 2>&1 | tee gradle-build.log
+      - run: |
+          set -o pipefail   # without this, tee masks gradle's exit code (bit us once)
+          gradle assembleDebug --no-daemon 2>&1 | tee gradle-build.log
 
       - name: Publish build logs to ci-logs branch (readable without auth)
         if: always()

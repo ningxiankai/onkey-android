@@ -150,7 +150,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLane(
         val t = i / fps
         if (midi.isNaN()) { pen = false } else {
             val x = playX + (t - nowSec) / windowSec * (w - playX)
-            val y = midiToY(midi, size.height)
+            val y = midiToY(midi, height)
             if (!pen) { path.moveTo(x, y); pen = true } else path.lineTo(x, y)
         }
         i++
