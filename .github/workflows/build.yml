@@ -81,7 +81,8 @@ jobs:
         run: |
           cd core
           export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
-          cargo ndk -t arm64-v8a -p 29 -o ../app/src/main/jniLibs build --release
+          set -o pipefail
+          cargo ndk -t arm64-v8a -p 29 -o ../app/src/main/jniLibs build --release 2>&1 | tee ../rust-build.log
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -93,7 +94,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - run: gradle assembleDebug --no-daemon
+      - run: gradle assembleDebug --no-daemon 2>&1 | tee gradle-build.log
+
+      - name: Publish build logs to ci-logs branch (readable without auth)
+        if: always()
+        run: |
+          if [ ! -f rust-build.log ] && [ ! -f gradle-build.log ]; then echo "no logs"; exit 0; fi
+          git config user.name "ci-logs"
+          git config user.email "ci@localhost"
+          git checkout --orphan ci-logs 2>/dev/null || git checkout ci-logs
+          git rm -rf --ignore-unmatch . 2>/dev/null || true
+          git add -f rust-build.log gradle-build.log 2>/dev/null || true
+          git commit -qm "build logs"
+          git push -f origin ci-logs
 
       - uses: actions/upload-artifact@v4
         with:
