@@ -1,0 +1,32 @@
+[package]
+name = "onkey_core"
+version = "0.1.0"
+description = "OnKey's learning/pitch pipeline built for Android (reused from OnKey, MIT)"
+license = "MIT"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "onkey_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+jni = "0.21"
+ndarray = "0.16"
+ureq = { version = "2", features = ["json"] }
+urlencoding = "2"
+realfft = "3"
+hyphenation = { version = "0.8", features = ["embed_en-us"] }
+libc = "0.2"
+flate2 = "1"
+crc32fast = "1"
+# ONNX Runtime with prebuilt binaries for Android (aarch64). NOTE: the upstream
+# "coreml" feature is intentionally off; Core ML paths are cfg-gated to Apple.
+ort = { version = "=2.0-rc.10", features = ["download-binaries"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"

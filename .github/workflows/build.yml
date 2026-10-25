@@ -1,0 +1,99 @@
+name: build-apk
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  models:
+    name: Extract OnKey models (macOS)
+    runs-on: macos-14
+    steps:
+      - name: Download OnKey release DMG
+        run: |
+          curl -fL -o OnKey.dmg "https://github.com/dsmurrell/onkey/releases/latest/download/OnKey.dmg"
+      - name: Mount and extract bundled models
+        run: |
+          hdiutil attach -nobrowse -readonly OnKey.dmg
+          VOL=$(ls /Volumes | grep -i onkey | head -1)
+          APP=$(find "/Volumes/$VOL" -maxdepth 2 -name "OnKey.app" | head -1)
+          echo "app at: $APP"
+          mkdir -p out/models/game
+          cp "$APP/Contents/Resources/models/"*.onnx out/models/
+          cp "$APP/Contents/Resources/models/game/"*.onnx out/models/game/
+          hdiutil detach "/Volumes/$VOL"
+          ls -la out/models
+      - name: Verify SHA-256 against upstream models.rs
+        run: |
+          cd out/models
+          check() {
+            want="$2"; got=$(shasum -a 256 "$1" | cut -d' ' -f1)
+            if [ "$want" != "$got" ]; then echo "SHA mismatch: $1"; exit 1; fi
+          }
+          check UVR_MDXNET_KARA_2.onnx      bf32e15105a09c0f7dddd2b67346146334d6f3ecb399ed7638eba2ab07cbf5f4
+          check crepe-full-b32.onnx         a41c3191fd398754eb46bacd7bb79eb71bfc3b0e7cd47989c2175c64adfe9d28
+          echo "models verified"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: models
+          path: out/models
+
+  build:
+    name: Build Android APK (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: models
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch models artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: models
+          path: models-extracted
+
+      - name: Place runtime models into APK assets
+        run: |
+          mkdir -p app/src/main/assets/models
+          cp models-extracted/UVR_MDXNET_KARA_2.onnx app/src/main/assets/models/
+          cp models-extracted/crepe-full-b32.onnx app/src/main/assets/models/
+
+      - name: Set up Python and export CREPE-tiny (compile-time)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Export crepe-tiny.onnx
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install torchcrepe onnx
+          mkdir -p core/models
+          python scripts/export_crepe.py tiny core/models/crepe-tiny.onnx
+
+      - name: Install Rust + cargo-ndk
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --locked
+
+      - name: Build Rust core for arm64
+        run: |
+          cd core
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          cargo ndk -t arm64-v8a -p 29 -o ../app/src/main/jniLibs build --release
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build APK
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - run: gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onkey-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
