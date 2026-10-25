@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.onkey.android.native.OnKeyCore.ensureModels(this)
-        com.onkey.android.native.OnKeyCore.nativeInit(filesDir.absolutePath)
+        com.onkey.android.native.OnKeyCore.nativeInit(filesDir.absolutePath, applicationInfo.nativeLibraryDir)
         viewModel.init(this)
 
         setContent {

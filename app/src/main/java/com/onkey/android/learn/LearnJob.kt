@@ -96,7 +96,7 @@ class LearnJob(private val context: Context) {
         /** Quick self-check used by MainActivity: models present + lib loads. */
         fun health(context: Context): String {
             val ok = OnKeyCore.ensureModels(context)
-            OnKeyCore.nativeInit(context.filesDir.absolutePath)
+            OnKeyCore.nativeInit(context.filesDir.absolutePath, context.applicationInfo.nativeLibraryDir)
             return "core=${OnKeyCore.coreVersion()} models=$ok"
         }
     }

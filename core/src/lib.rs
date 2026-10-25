@@ -59,12 +59,14 @@ const CREPE_FULL: &str = "crepe-full-b32.onnx";
 
 static CREPE_LIVE: std::sync::Mutex<Option<pitch::Crepe>> = std::sync::Mutex::new(None);
 
-/// Call once at app start with the app's files dir: initialises settings storage.
+/// Call once at app start: initialises settings storage and points ort at the
+/// onnxruntime .so bundled from the onnxruntime-android AAR (load-dynamic).
 #[no_mangle]
 pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativeInit(
     env: JNIEnv,
     _class: JClass,
     data_dir: JString,
+    native_lib_dir: JString,
 ) {
     let dir = match env.get_string(&data_dir) {
         Ok(s) => std::path::PathBuf::from(s.to_string_lossy().into_owned()),
@@ -72,6 +74,12 @@ pub extern "system" fn Java_com_onkey_android_native_OnKeyCore_nativeInit(
     };
     let _ = std::fs::create_dir_all(&dir);
     settings::init(&dir);
+    if let Ok(libdir) = env.get_string(&native_lib_dir) {
+        let dylib = std::path::PathBuf::from(libdir.to_string_lossy().into_owned()).join("libonnxruntime.so");
+        if dylib.exists() {
+            unsafe { std::env::set_var("ORT_DYLIB_PATH", &dylib) };
+        }
+    }
 }
 
 #[no_mangle]

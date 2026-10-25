@@ -13,8 +13,8 @@ object OnKeyCore {
 
     external fun coreVersion(): String
 
-    /** Call once at app start with a writable data dir (initialises Rust-side settings). */
-    external fun nativeInit(dataDir: String)
+    /** Call once at app start: dataDir = writable dir; nativeLibDir = applicationInfo.nativeLibraryDir (has libonnxruntime.so). */
+    external fun nativeInit(dataDir: String, nativeLibDir: String)
 
     /**
      * Learn a song. [stereo] is interleaved f32 at [rate]; blocks — run on a worker
