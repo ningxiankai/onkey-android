@@ -102,13 +102,15 @@ jobs:
       - name: Publish build logs to ci-logs branch (readable without auth)
         if: always()
         run: |
-          if [ ! -f rust-build.log ] && [ ! -f gradle-build.log ]; then echo "no logs"; exit 0; fi
+          ls -la rust-build.log gradle-build.log 2>/dev/null || true
           git config user.name "ci-logs"
           git config user.email "ci@localhost"
           git checkout --orphan ci-logs 2>/dev/null || git checkout ci-logs
           git rm -rf --ignore-unmatch . 2>/dev/null || true
-          git add -f rust-build.log gradle-build.log 2>/dev/null || true
-          git commit -qm "build logs"
+          git add -f rust-build.log 2>/dev/null || true
+          git add -f gradle-build.log 2>/dev/null || true
+          git commit -qm "build logs" || true
+          git log --oneline -1
           git push -f origin ci-logs
 
       - uses: actions/upload-artifact@v4
